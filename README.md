@@ -1,14 +1,16 @@
-# CorelDRAW 脚本创建表格示例
+# CorelDRAW X7 COM API 脚本参考
 
-本目录包含通过阅读官方《CorelDRAW X7 脚本参考手册》（PDF/CHM）整理的 VBA 宏示例，演示如何用 **CorelDRAW X7 COM API** 动态创建和格式化表格。
+本仓库整理了通过阅读官方《CorelDRAW X7 脚本参考手册》（PDF / CHM）提炼的 VBA 宏使用指南与示例代码，涵盖文字样式设置、表格创建与格式化等常用场景，方便开发者快速查阅正确的 COM API 用法。
 
 ---
 
-## 文件说明
+## 仓库文件说明
 
-| 文件 | 说明 |
-|------|------|
-| `CreateTable示例.vba` | VBA 宏脚本，含两个可运行示例（产品表 + 日历） |
+| 文件 / 目录 | 说明 |
+|-------------|------|
+| `字体样式设置指南.md` | 字体名称、字号、粗/斜/下划线、大小写、上下标、颜色、间距等完整 API 速查 |
+| `创建表格指南.md` | 表格创建、单元格读写、合并、填充、边框、行列管理等 API 速查及示例 |
+| `CreateTable示例.vba` | 可运行的 VBA 宏（产品信息表 + 2009 年 1 月日历两个示例） |
 | `CorelDRAW X7 脚本手册.chm` | CorelDRAW X7 官方脚本参考手册（CHM 格式） |
 | `CorelDraw脚本参考手册X7_0*.pdf` | CorelDRAW X7 脚本参考手册分册（PDF 格式，共 8 册） |
 
@@ -26,179 +28,44 @@
 
 1. 打开 CorelDRAW。
 2. 点击菜单 **工具（Tools）→ 宏（Macros）→ 宏编辑器（Macro Editor）**，或按 **Alt+F11**。
-3. 在左侧"工程"窗格中插入新模块，将 `CreateTable示例.vba` 全部内容粘贴进去。
-4. 将光标置于 `Sub Main()` 或 `Sub CreateCalendar_January2009()` 内，按 **F5** 运行。
+3. 在左侧"工程"窗格中插入新模块，将 `.vba` 文件中的代码粘贴进去。
+4. 将光标置于任意 `Sub` 过程内，按 **F5** 运行。
 5. 切换回 CorelDRAW 主窗口查看结果。
 
 ---
 
-## 脚本功能概览
+## 内容导览
 
-脚本包含两个示例：
+### 字体样式设置 → [`字体样式设置指南.md`](字体样式设置指南.md)
 
-### 示例一：`Main` — 产品信息表
+涵盖以下 `TextRange` 属性与方法：
 
-```
-CreateCustomShape("Table", 20, 20, 140, 70, 4, 5)
-├── 第 1 行：列标题（深蓝背景、10 号字、居中）
-├── 第 2-5 行：产品数据（斑马纹、数字列右对齐）
-├── 列宽比例 1:2:1.5:1.5（通过 SetWidth 设置）
-└── 整体外框线宽 0.5 mm
-```
+- **字体 / 字号**：`Font`、`Size`
+- **粗体 / 斜体**：`Bold`、`Italic`
+- **字体样式枚举**：`Style`（`cdrFontStyle`，含 18 个常量）
+- **下划线 / 删除线**：`Underline`、`Strikethru`（`cdrFontLine` 枚举）
+- **大小写**：`Case`（`cdrFontCase`）、`ChangeCase`
+- **上标 / 下标**：`Position`（`cdrFontPosition`）
+- **文字颜色**：`Fill.ApplyUniformFill`
+- **对齐方式**：`Alignment`
+- **字符 / 词 / 行间距**：`CharSpacing`、`WordSpacing`、`SetLineSpacing`
+- **字偶间距 / 旋转 / 偏移**：`RangeKerning`、`CharAngle`、`HorizShift`、`VertShift`
 
-生成效果：
+### 创建表格 → [`创建表格指南.md`](创建表格指南.md)
 
-| 产品编号 | 产品名称 | 单价（元） | 库存（件） |
-|---------|---------|-----------|-----------|
-| P-001   | 圆珠笔   |      2.50 |      1200 |
-| P-002   | 笔记本   |     15.00 |       560 |
-| P-003   | 文件夹   |      8.80 |       340 |
-| P-004   | 订书机   |     32.00 |        88 |
+涵盖以下核心 API：
 
-### 示例二：`CreateCalendar_January2009` — 2009 年 1 月日历
-
-官方手册 `Layer.CreateCustomShape` 章节中的经典示例（原文忠实复现）：
-
-```
-CreateCustomShape("Table", 1, 10, 5, 7, 7, 6)
-├── 填入星期缩写（第 1 行）
-├── AddRow 1 — 在顶部插入月份标题行
-├── 合并标题行全部 7 格，写入 "January"，字号 22，居中
-├── 按顺序填入日期 1~31（从单元格编号 13 开始）
-├── 合并空白格（编号 9~12）并填灰色
-└── 为 1 月 1 日加绿色高亮边框
-```
-
----
-
-## 核心 API 速查（来自官方文档）
-
-### 1. 创建表格
-
-```vba
-' 语法（官方文档原文）：
-' CreateCustomShape("Table", Left, Top, Right, Bottom, Columns, Rows) As Shape
-' 参数均为文档单位（默认毫米）；Left/Top/Right/Bottom 是表格四边到页面边框的距离
-
-Set s = ActiveLayer.CreateCustomShape("Table", 20, 20, 140, 70, 4, 5)
-```
-
-> ⚠️ 不存在 `CreateTable()` 方法。必须通过 `CreateCustomShape("Table", ...)` 创建。
-
-### 2. 访问 TableShape 对象
-
-```vba
-Dim ts As Object
-Set ts = s.Custom   ' Shape.Custom 返回 TableShape
-```
-
-### 3. 访问单元格
-
-```vba
-' Cell(Column, Row) —— 列索引在前，行索引在后，均从 1 开始
-Dim cell As Object
-Set cell = ts.Cell(2, 3)   ' 第 2 列、第 3 行的单元格
-```
-
-### 4. 写入文字
-
-```vba
-cell.TextShape.Text.Story = "Hello"
-' 设置字号
-cell.TextShape.Text.Story.Words.All.Size = 12
-' 设置对齐
-cell.TextShape.Text.Story.Alignment = cdrCenterAlignment
-```
-
-### 5. 填充背景色
-
-```vba
-Dim f As Fill
-Set f = ActiveDocument.CreateFill("MyFill")
-f.ApplyUniformFill CreateRGBColor(31, 73, 125)
-cell.Fill.ApplyUniformFill CreateRGBColor(31, 73, 125)
-
-' 对一个范围批量填充（CellRange(ColStart, RowStart, ColEnd, RowEnd)）
-ts.CellRange(1, 1, 4, 1).ApplyFill f
-```
-
-### 6. 合并单元格
-
-```vba
-' 方式一：通过行的所有单元格
-ts.Rows(1).Cells.All.Merge
-
-' 方式二：通过 CellRange
-ts.CellRange(1, 1, 4, 1).Merge
-
-' 方式三：通过 Cells 索引范围
-ts.Cells.Range(9, 10, 11, 12).Merge
-```
-
-### 7. 设置边框
-
-```vba
-' 整张表外框（通过 Shape.Outline）
-s.Outline.Width = 0.5
-
-' 某个范围的边框
-ts.Rows(1).Cells.All.Borders.All.Width = 0.05
-
-' 特定单元格边框颜色（绿色）
-ts.Cells.Range(10).Borders.All.Color.RGBAssign 0, 255, 0
-```
-
-### 8. 设置行高 / 列宽
-
-```vba
-' SetWidth(Width, ResizeTable)
-ts.Columns(1).SetWidth 20, False   ' 设置第 1 列宽 20 mm，不整体缩放
-
-' SetHeight(Height, ResizeTable)
-ts.Rows(2).SetHeight 10, False     ' 设置第 2 行高 10 mm
-
-' 也可直接赋值（Width 属性）
-ts.Columns(1).Width = 20
-```
-
-### 9. 添加 / 删除行列
-
-```vba
-ts.AddRow 1         ' 在第 1 行前插入新行
-ts.AddColumn        ' 在最后追加一列
-ts.Rows(3).Delete   ' 删除第 3 行
-```
-
-### 10. 按顺序索引单元格（Cells 集合）
-
-```vba
-' Cells 从左到右、从上到下连续编号（从 1 开始）
-' 已合并的一组单元格只占 1 个编号
-ts.Cells(13).TextShape.Text.Story = 1   ' 第 13 个单元格写入 "1"
-```
-
----
-
-## 重要注意事项
-
-| 错误用法 ❌ | 正确用法 ✅ | 来源 |
-|-----------|-----------|------|
-| `layer.CreateTable(rows, cols, w, h)` | `layer.CreateCustomShape("Table", L, T, R, B, cols, rows)` | 手册 Layer.CreateCustomShape 章节 |
-| `shape.Table` | `shape.Custom` | 手册 TableShape 类说明 |
-| `cell.Text.Story.TextRange.Text` | `cell.TextShape.Text.Story` | 手册 TableCell.TextShape 属性 |
-| `tbl.Column(i).Width = v` | `ts.Columns(i).SetWidth v, False` 或 `.Width = v` | 手册 TableColumn.SetWidth 方法 |
-| `Cell(Row, Col)` | `Cell(Column, Row)` — 列在前！ | 手册 TableShape.Cell 方法 |
+- **创建表格**：`CreateCustomShape("Table", ...)`（⚠️ 不存在 `CreateTable()` 方法）
+- **访问 TableShape**：`Shape.Custom`
+- **单元格访问**：`TableShape.Cell(Column, Row)`（列在前，行在后）
+- **单元格文字**：`TableCell.TextShape.Text.Story`
+- **填充 / 合并 / 边框 / 行列管理**
 
 ---
 
 ## 参考资料
 
 - 本仓库中的《CorelDraw脚本参考手册X7》PDF（共 8 册）
-  - 表格创建：第 3 册 第 559-560 页（`Layer.CreateCustomShape`）
-  - TableShape 类：第 5 册 第 601-617 页
-  - TableCell 类：第 5 册 第 497-531 页
-  - TableBorders 类：第 5 册 第 484-496 页
-  - cdrTableBorder 枚举：第 1 册
 - 本仓库中的《CorelDRAW X7 脚本手册》（CHM）
 - CorelDRAW 官方开发者社区：https://community.coreldraw.com/sdk/
 
