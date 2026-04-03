@@ -2,189 +2,216 @@
 ' CorelDraw 脚本创建表格示例
 ' 适用版本：CorelDRAW X7 及以上
 ' 语言：VBA (Visual Basic for Applications)
-' 使用方法：在 CorelDRAW 中，打开「工具 > 宏 > 宏编辑器」，
-'           新建模块后粘贴本代码，按 F5 运行 Main 过程。
+'
+' 核心 API（来自官方《CorelDRAW X7 脚本参考手册》）：
+'   创建表格：Layer.CreateCustomShape("Table", Left, Top, Right, Bottom, Cols, Rows)
+'   访问 TableShape 对象：Shape.Custom
+'   访问单元格：TableShape.Cell(Column, Row)  ← 注意列在前、行在后
+'   单元格文字：TableCell.TextShape.Text.Story
+'   单元格填充：TableCell.Fill.ApplyUniformFill color
+'   合并单元格：TableCellRange.Merge
+'   单元格边框：TableBorders.SetBorders(cdrTableBorderXxx, IVGOutline)
+'   添加行/列：TableShape.AddRow([RowIndex])  /  TableShape.AddColumn([ColIndex])
+'   删除行/列：TableRow.Delete  /  TableColumn.Delete
+'   设置行高：TableRow.SetHeight(Height, ResizeTable)
+'   设置列宽：TableColumn.SetWidth(Width, ResizeTable)
+'
+' 使用方法：
+'   在 CorelDRAW 中，打开「工具 > 宏 > 宏编辑器（Alt+F11）」，
+'   新建模块后粘贴本代码，将光标置于 Main 过程内，按 F5 运行。
 ' =============================================================================
 
 Option Explicit
 
-' -----------------------------------------------------------------------------
-' 主入口：创建一个带格式和内容的示例表格
-' -----------------------------------------------------------------------------
+' =============================================================================
+' 示例一：产品信息表（带表头样式、斑马纹、列宽比例）
+' =============================================================================
 Sub Main()
-    Dim doc      As Document
-    Dim layer    As layer
-    Dim tblShape As Shape
-    Dim tbl      As Table
-
-    ' 行数、列数
-    Const ROWS    As Integer = 5
-    Const COLS    As Integer = 4
-
-    ' 表格尺寸（单位：毫米）
-    Const TBL_WIDTH  As Double = 120
-    Const TBL_HEIGHT As Double = 80
-
-    ' 表格左上角在页面中的位置（毫米，原点在页面左下角）
-    Const POS_X As Double = 30
-    Const POS_Y As Double = 170
-
     ' -------------------------------------------------------------------------
     ' 1. 确认活动文档；若无则新建
     ' -------------------------------------------------------------------------
     If Application.Documents.Count = 0 Then
-        Set doc = Application.Documents.Add
-    Else
-        Set doc = Application.ActiveDocument
+        CreateDocument
     End If
 
-    Set layer = doc.ActivePage.ActiveLayer
+    Dim doc   As Document
+    Dim s     As Shape          ' 表格 Shape
+    Dim ts    As Object         ' TableShape（通过 Shape.Custom 访问）
+
+    Set doc = ActiveDocument
 
     ' -------------------------------------------------------------------------
-    ' 2. 在当前图层上创建表格对象
-    '    CreateTable(rows, cols, width_mm, height_mm)
+    ' 2. 用 CreateCustomShape("Table", ...) 创建表格
+    '
+    '    参数含义（文档单位，默认毫米）：
+    '      Left   = 距页面左边距  20 mm
+    '      Top    = 距页面顶边距  20 mm
+    '      Right  = Left + 宽度  = 140 mm
+    '      Bottom = Top  + 高度  = 70 mm
+    '      Columns = 4
+    '      Rows    = 5（表头 1 行 + 数据 4 行）
     ' -------------------------------------------------------------------------
-    Set tblShape = layer.CreateTable(ROWS, COLS, _
-                                     MillimetersToPoints(TBL_WIDTH), _
-                                     MillimetersToPoints(TBL_HEIGHT))
-
-    ' 将表格移动到指定位置（SetPosition 参数为点数，原点在页面左下角）
-    tblShape.SetPosition MillimetersToPoints(POS_X), _
-                         MillimetersToPoints(POS_Y)
-
-    ' -------------------------------------------------------------------------
-    ' 3. 获取 Table 对象，进行格式化与内容填充
-    ' -------------------------------------------------------------------------
-    Set tbl = tblShape.Table
-
-    ' 调用子过程分别设置格式和内容
-    Call FormatTableHeader(tbl)
-    Call FillTableContent(tbl)
-    Call SetColumnWidths(tbl, COLS, TBL_WIDTH)
+    Set s  = ActiveLayer.CreateCustomShape("Table", 20, 20, 140, 70, 4, 5)
+    Set ts = s.Custom   ' ts 即 TableShape 对象
 
     ' -------------------------------------------------------------------------
-    ' 4. 选中表格，让用户直观看到结果
+    ' 3. 填充列标题（第 1 行）
+    '    Cell(Column, Row) —— 列索引在前，行索引在后，均从 1 开始
     ' -------------------------------------------------------------------------
-    tblShape.Selected = True
+    ts.Cell(1, 1).TextShape.Text.Story = "产品编号"
+    ts.Cell(2, 1).TextShape.Text.Story = "产品名称"
+    ts.Cell(3, 1).TextShape.Text.Story = "单价（元）"
+    ts.Cell(4, 1).TextShape.Text.Story = "库存（件）"
 
-    MsgBox "表格创建完成！" & vbCrLf & _
-           "规格：" & ROWS & " 行 × " & COLS & " 列" & vbCrLf & _
-           "尺寸：" & TBL_WIDTH & " mm × " & TBL_HEIGHT & " mm", _
+    ' -------------------------------------------------------------------------
+    ' 4. 填充数据行（第 2-5 行）
+    ' -------------------------------------------------------------------------
+    Dim rowData(1 To 4, 1 To 4) As String
+    rowData(1, 1) = "P-001" : rowData(1, 2) = "圆珠笔" : rowData(1, 3) = "2.50"  : rowData(1, 4) = "1200"
+    rowData(2, 1) = "P-002" : rowData(2, 2) = "笔记本" : rowData(2, 3) = "15.00" : rowData(2, 4) = "560"
+    rowData(3, 1) = "P-003" : rowData(3, 2) = "文件夹" : rowData(3, 3) = "8.80"  : rowData(3, 4) = "340"
+    rowData(4, 1) = "P-004" : rowData(4, 2) = "订书机" : rowData(4, 3) = "32.00" : rowData(4, 4) = "88"
+
+    Dim r As Integer, c As Integer
+    For r = 1 To 4
+        For c = 1 To 4
+            ts.Cell(c, r + 1).TextShape.Text.Story = rowData(r, c)
+        Next c
+    Next r
+
+    ' -------------------------------------------------------------------------
+    ' 5. 设置表头样式（第 1 行）：深蓝背景、白色加粗文字、居中
+    ' -------------------------------------------------------------------------
+    Dim headerRange As Object   ' TableCellRange
+    Set headerRange = ts.CellRange(1, 1, 4, 1)  ' CellRange(ColStart, RowStart, ColEnd, RowEnd)
+
+    Dim blueColor As New Color
+    blueColor.RGBAssign 31, 73, 125
+
+    Dim fillObj As Fill
+    Set fillObj = ActiveDocument.CreateFill("HeaderFill")
+    fillObj.ApplyUniformFill blueColor
+    headerRange.ApplyFill fillObj
+
+    For c = 1 To 4
+        With ts.Cell(c, 1).TextShape.Text.Story
+            .Alignment = cdrCenterAlignment
+            .Words.All.Size = 10
+        End With
+    Next c
+
+    ' -------------------------------------------------------------------------
+    ' 6. 数据行斑马纹：偶数行浅灰背景
+    ' -------------------------------------------------------------------------
+    Dim grayColor As New Color
+    grayColor.RGBAssign 242, 242, 242
+
+    Dim grayFill As Fill
+    Set grayFill = ActiveDocument.CreateFill("GrayFill")
+    grayFill.ApplyUniformFill grayColor
+
+    For r = 2 To 5
+        If r Mod 2 = 0 Then
+            ts.CellRange(1, r, 4, r).ApplyFill grayFill
+        End If
+    Next r
+
+    ' -------------------------------------------------------------------------
+    ' 7. 数字列（第 3、4 列）数据行右对齐
+    ' -------------------------------------------------------------------------
+    For r = 2 To 5
+        ts.Cell(3, r).TextShape.Text.Story.Alignment = cdrRightAlignment
+        ts.Cell(4, r).TextShape.Text.Story.Alignment = cdrRightAlignment
+    Next r
+
+    ' -------------------------------------------------------------------------
+    ' 8. 设置列宽（比例 1 : 2 : 1.5 : 1.5，总宽 120 mm）
+    '    SetWidth(Width, ResizeTable) — Width 单位与文档单位一致（毫米）
+    ' -------------------------------------------------------------------------
+    ts.Columns(1).SetWidth 20,  False
+    ts.Columns(2).SetWidth 40,  False
+    ts.Columns(3).SetWidth 30,  False
+    ts.Columns(4).SetWidth 30,  True    ' 最后一列 ResizeTable=True 使整体自适应
+
+    ' -------------------------------------------------------------------------
+    ' 9. 设置整体外框线宽（直接操作 Shape.Outline）
+    ' -------------------------------------------------------------------------
+    s.Outline.Width = 0.5
+
+    ' -------------------------------------------------------------------------
+    ' 10. 选中表格，返回焦点
+    ' -------------------------------------------------------------------------
+    s.Selected = True
+
+    MsgBox "产品信息表创建完成！" & vbCrLf & _
+           "5 行 × 4 列，位于页面左上角 (20, 20) mm", _
            vbInformation, "CorelDRAW 表格示例"
 End Sub
 
-' -----------------------------------------------------------------------------
-' 格式化表头（第 1 行）
-' - 背景填充深蓝色
-' - 文字白色、加粗、居中
-' -----------------------------------------------------------------------------
-Private Sub FormatTableHeader(tbl As Table)
-    Dim col As Integer
-    Dim cell As Cell
+' =============================================================================
+' 示例二：2009 年 1 月日历
+' （忠实复现官方《CorelDRAW X7 脚本参考手册》中的经典示例，
+'  原文见 Layer.CreateCustomShape 方法说明页）
+' =============================================================================
+Sub CreateCalendar_January2009()
+    If Application.Documents.Count = 0 Then
+        CreateDocument
+    End If
 
-    For col = 1 To tbl.Columns
-        Set cell = tbl.Cell(1, col)
+    Dim s1 As Shape
 
-        ' 背景色：深蓝 #1F497D
-        cell.Fill.UniformColor.RGBAssign 31, 73, 125
+    ' 创建 7 列 × 7 行的表格（含标题行和星期行各 1 行，日期 5 行）
+    ' 参数：Left=1, Top=10, Right=5, Bottom=7, Columns=7, Rows=6
+    Set s1 = ActiveLayer.CreateCustomShape("Table", 1, 10, 5, 7, 7, 6)
 
-        ' 文字颜色：白色
-        cell.Text.Story.TextRange.Fill.UniformColor.RGBAssign 255, 255, 255
+    ' 第 1 行填入星期缩写
+    s1.Custom.Cell(1, 1).TextShape.Text.Story = "Sun"
+    s1.Custom.Cell(2, 1).TextShape.Text.Story = "Mon"
+    s1.Custom.Cell(3, 1).TextShape.Text.Story = "Tue"
+    s1.Custom.Cell(4, 1).TextShape.Text.Story = "Wed"
+    s1.Custom.Cell(5, 1).TextShape.Text.Story = "Thu"
+    s1.Custom.Cell(6, 1).TextShape.Text.Story = "Fri"
+    s1.Custom.Cell(7, 1).TextShape.Text.Story = "Sat"
 
-        ' 字体：加粗、10 号
-        With cell.Text.Story.TextRange.Font
-            .Bold = True
-            .Size = 10
-        End With
+    ' 在第 1 行上方插入新行（作为月份标题行）
+    s1.Custom.AddRow 1
 
-        ' 水平居中
-        cell.Text.Story.TextRange.Alignment = cdrCenterAlignment
-    Next col
-End Sub
+    ' 合并新增标题行的全部 7 个单元格
+    s1.Custom.Rows(1).Cells.All.Merge
 
-' -----------------------------------------------------------------------------
-' 填充表格内容
-' - 第 1 行：列标题
-' - 第 2-5 行：数据示例
-' -----------------------------------------------------------------------------
-Private Sub FillTableContent(tbl As Table)
-    ' ----- 列标题 -----
-    Dim headers(1 To 4) As String
-    headers(1) = "产品编号"
-    headers(2) = "产品名称"
-    headers(3) = "单价（元）"
-    headers(4) = "库存（件）"
+    ' 填入月份标题并设置字号和居中对齐
+    s1.Custom.Cell(1, 1).TextShape.Text.Story = "January"
+    s1.Custom.Cell(1, 1).TextShape.Text.Story.Words.All.Size = 22
+    s1.Custom.Cell(1, 1).TextShape.Text.Story.Alignment = cdrCenterAlignment
 
-    Dim col As Integer
-    For col = 1 To 4
-        tbl.Cell(1, col).Text.Story.TextRange.Text = headers(col)
-    Next col
-
-    ' ----- 数据行 -----
-    Dim data(2 To 5, 1 To 4) As String
-    data(2, 1) = "P-001" : data(2, 2) = "圆珠笔"     : data(2, 3) = "2.50"  : data(2, 4) = "1200"
-    data(3, 1) = "P-002" : data(3, 2) = "笔记本"     : data(3, 3) = "15.00" : data(3, 4) = "560"
-    data(4, 1) = "P-003" : data(4, 2) = "文件夹"     : data(4, 3) = "8.80"  : data(4, 4) = "340"
-    data(5, 1) = "P-004" : data(5, 2) = "订书机"     : data(5, 3) = "32.00" : data(5, 4) = "88"
-
-    Dim row As Integer
-    For row = 2 To 5
-        For col = 1 To 4
-            Dim cell As Cell
-            Set cell = tbl.Cell(row, col)
-
-            ' 填入文字
-            cell.Text.Story.TextRange.Text = data(row, col)
-
-            ' 奇偶行交替底色（斑马纹）
-            If row Mod 2 = 0 Then
-                ' 偶数行：浅灰 #F2F2F2
-                cell.Fill.UniformColor.RGBAssign 242, 242, 242
-            Else
-                ' 奇数行：白色
-                cell.Fill.UniformColor.RGBAssign 255, 255, 255
-            End If
-
-            ' 数字列（第 3、4 列）右对齐
-            If col >= 3 Then
-                cell.Text.Story.TextRange.Alignment = cdrRightAlignment
-            End If
-
-            ' 统一字号
-            cell.Text.Story.TextRange.Font.Size = 9
-        Next col
-    Next row
-End Sub
-
-' -----------------------------------------------------------------------------
-' 设置各列宽度（按比例分配总宽度）
-' 列比例：1 : 2 : 1.5 : 1.5
-' -----------------------------------------------------------------------------
-Private Sub SetColumnWidths(tbl As Table, totalCols As Integer, totalWidthMM As Double)
-    Dim ratios(1 To 4) As Double
-    ratios(1) = 1
-    ratios(2) = 2
-    ratios(3) = 1.5
-    ratios(4) = 1.5
-
-    Dim ratioSum As Double
-    ratioSum = 0
+    ' 从第 13 个单元格（即第 3 行第 6 列，对应 1 月 1 日 = 星期四）开始填入日期
+    ' Cells 集合按从左到右、从上到下顺序编号，第 1 行合并为 1 个单元格 → 编号 1
+    ' 第 2 行（星期行）7 个单元格 → 编号 2~8，日期从第 9 个起（第 3 行星期日）
+    ' 2009-01-01 是星期四，对应第 3 行第 5 列 → 单元格编号 = 9+4 = 13
     Dim i As Integer
-    For i = 1 To totalCols
-        ratioSum = ratioSum + ratios(i)
+    For i = 1 To 31
+        s1.Custom.Cells(i + 12).TextShape.Text.Story = i
     Next i
 
-    For i = 1 To totalCols
-        Dim widthMM As Double
-        widthMM = totalWidthMM * ratios(i) / ratioSum
-        tbl.Column(i).Width = MillimetersToPoints(widthMM)
-    Next i
+    ' 合并第 3 行无日期的空白单元格（编号 9~12，对应星期日~星期三）并填灰色
+    s1.Custom.Cells.Range(9, 10, 11, 12).Merge
+
+    Dim grayFill As Fill
+    Set grayFill = ActiveDocument.CreateFill("EmptyCellFill")
+    grayFill.ApplyUniformFill CreateRGBColor(220, 220, 220)
+    s1.Custom.Cells.Range(9, 10, 11, 12).ApplyFill grayFill
+
+    ' 设置整张表格外框线宽
+    s1.Outline.Width = 0.05
+
+    ' 设置标题行（第 1 行）的内部边框
+    s1.Custom.Rows(1).Cells.All.Borders.All.Width = 0.05
+
+    ' 为 1 月 1 日所在单元格（编号 13）加绿色高亮边框
+    s1.Custom.Cells(10).Borders.All.Width = 0.05
+    s1.Custom.Cells.Range(10).Borders.All.Color.RGBAssign 0, 255, 0
+
+    s1.Selected = True
+
+    MsgBox "January 2009 日历创建完成！", vbInformation, "CorelDRAW 日历示例"
 End Sub
-
-' -----------------------------------------------------------------------------
-' 辅助：将毫米转换为磅（CorelDRAW 内部单位）
-' 1 mm = 2.834645669291339 points
-' -----------------------------------------------------------------------------
-Private Function MillimetersToPoints(mm As Double) As Double
-    MillimetersToPoints = mm * 2.834645669291339
-End Function
