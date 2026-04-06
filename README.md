@@ -8,11 +8,14 @@
 
 | 文件 / 目录 | 说明 |
 |-------------|------|
+| `CorelStyleSheetHelper.cs` | **C# 工具类**：封装 StyleSheet / Style / StyleSet 的创建、应用、查找、导出等操作；**正确处理 `ss.Fill` 为 null 的问题** |
+| `样式表操作工具类.md` | `CorelStyleSheetHelper.cs` 的完整中文文档：`ss.Fill` 为 null 的根本原因、两种修复路径、分场景示例、常见问题 |
 | `TextRangeHelper.cs` | **C# 工具类**：统一从编辑选区/选中形状/当前页面/整个文档获取 `TextRange`，永不抛出 COM 异常 |
 | `TextRange获取工具类.md` | `TextRangeHelper.cs` 的完整中文文档：API 说明、分场景示例、优先级说明、常见问题 |
 | `Shape对象完整指南.md` | **Shape · ShapeRange · Shapes · SelectionInfo** 全部属性、方法、选择操作、布尔运算及综合示例 |
 | `打印机操作完整指南.md` | **打印机系统 · PrintSettings · PostScript · 分色 · 陷印 · 印前处理**全部 API 速查及综合示例 |
 | `对象样式设置指南.md` | 轮廓、填充、透明度、字符、段落、图文框、位图效果、QR 码等完整 API 速查 |
+| `样式集与样式的区别.md` | Style 与 StyleSet 的概念对比、创建方法、正确 VBA 示例（含 `ss.Fill` 为 null 的修正） |
 | `字体样式设置指南.md` | 字体名称、字号、粗/斜/下划线、大小写、上下标、颜色、间距等完整 API 速查 |
 | `创建表格指南.md` | 表格创建、单元格读写、合并、填充、边框、行列管理等 API 速查及示例 |
 | `CreateTable示例.vba` | 可运行的 VBA 宏（产品信息表 + 2009 年 1 月日历两个示例） |
@@ -60,6 +63,24 @@
 ---
 
 ## 内容导览
+
+### StyleSheet 操作工具类（C#）→ [`CorelStyleSheetHelper.cs`](CorelStyleSheetHelper.cs) · [`样式表操作工具类.md`](样式表操作工具类.md)
+
+封装了创建、应用、查找、导出样式和样式集的全套操作，并**正确处理了 `ss.Fill` 为 null 的问题**：
+
+> **⚠️ 已知 API 陷阱**：`StyleSheet.CreateStyleSet()` 返回空容器，
+> 其 `.Fill`、`.Outline` 等属性均为 `null`，直接赋值会报运行时错误。
+> 必须先调用 `styleSet.CreateStyle("fill")` 创建子样式，或改用 `CreateStyleSetFromShape`。
+
+| 方法 | 说明 |
+|------|------|
+| `CreateFillStyle(app, name, r, g, b)` | 创建 RGB 纯色填充样式 |
+| `CreateOutlineStyle(app, name, widthMm, r, g, b)` | 创建 RGB 轮廓样式 |
+| `CreateCharacterStyle(app, name, font, size, ...)` | 创建字符样式 |
+| `CreateStyleSetViaShape(...)` | **推荐**：通过临时形状创建样式集（绕过 null 问题） |
+| `CreateStyleSetViaSubStyles(...)` | 通过 `CreateStyle` 子样式创建样式集 |
+| `ApplyStyle(shape, name)` / `ApplyStyleToShapes(shapes, name)` | 应用/批量应用样式 |
+| `ExportStyles` / `ImportStyles` | 导出/导入 `.cdss` 样式文件 |
 
 ### TextRange 获取工具类（C#）→ [`TextRangeHelper.cs`](TextRangeHelper.cs) · [`TextRange获取工具类.md`](TextRange获取工具类.md)
 
