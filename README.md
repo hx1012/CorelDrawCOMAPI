@@ -70,15 +70,14 @@
 
 > **⚠️ 已知 API 陷阱**：`StyleSheet.CreateStyleSet()` 返回空容器，
 > 其 `.Fill`、`.Outline` 等属性均为 `null`，直接赋值会报运行时错误。
-> 必须先调用 `styleSet.CreateStyle("fill")` 创建子样式，或改用 `CreateStyleSetFromShape`。
+> `Style`（样式集）对象**没有** `CreateStyle` 方法，唯一正确做法是改用 `CreateStyleSetFromShape`。
 
 | 方法 | 说明 |
 |------|------|
 | `CreateFillStyle(app, name, r, g, b)` | 创建 RGB 纯色填充样式 |
 | `CreateOutlineStyle(app, name, widthMm, r, g, b)` | 创建 RGB 轮廓样式 |
 | `CreateCharacterStyle(app, name, font, size, ...)` | 创建字符样式 |
-| `CreateStyleSetViaShape(...)` | **推荐**：通过临时形状创建样式集（绕过 null 问题） |
-| `CreateStyleSetViaSubStyles(...)` | 通过 `CreateStyle` 子样式创建样式集 |
+| `CreateStyleSetViaShape(...)` | **唯一正确方式**：通过临时形状创建样式集 |
 | `ApplyStyle(shape, name)` / `ApplyStyleToShapes(shapes, name)` | 应用/批量应用样式 |
 | `ExportStyles` / `ImportStyles` | 导出/导入 `.cdss` 样式文件 |
 

@@ -9,17 +9,16 @@
 //   StyleSheet.CreateStyleSet(...)     — 创建空样式集容器
 //   StyleSheet.CreateStyleFromShape(Shape, Cat, ...) — 从形状捕获单类别样式
 //   StyleSheet.CreateStyleSetFromShape(Shape, ...)   — 从形状捕获多类别样式集
-//   Style.CreateStyle(Category)        — 在样式集内创建子样式（激活对应属性）
-//   Style.Fill / Style.Outline         — 子样式属性（仅创建子样式后才非 null）
+//   Style.Fill / Style.Outline         — 样式集子属性（StyleSet 创建后为 null，需通过 FromShape 激活）
 //   Style.Delete / Style.Rename        — 删除/重命名
 //   StyleSheet.FindStyle(Name)         — 按名称查找
 //   Shape.ApplyStyle(Name)             — 应用到形状
 //
 // ⚠️ 重要说明（ss.Fill 为 null 问题）：
-//   CreateStyleSet 创建的是空容器，其 .Fill、.Outline 等属性均为 null。
-//   必须先在容器内调用 Style.CreateStyle("fill") / Style.CreateStyle("outline")
-//   创建对应的子样式，才能访问对应属性。
-//   推荐使用 CreateStyleSetViaShape 方法，通过临时形状间接创建，更为可靠。
+//   StyleSheet.CreateStyleSet() 创建的是空容器，其 .Fill、.Outline 等属性均为 null。
+//   Style（样式集）对象本身没有 CreateStyle 方法，无法在容器上直接创建子样式。
+//   唯一正确的做法：通过临时形状配合 CreateStyleSetFromShape 捕获。
+//   本类的 CreateStyleSetViaShape 方法已正确封装此流程。
 //
 // 使用方式（后期绑定，无需额外 DLL 引用）：
 //   dynamic app = Marshal.GetActiveObject("CorelDRAW.Application");
@@ -40,9 +39,10 @@ namespace CorelDrawCOMAPI
     /// </para>
     /// <para>
     /// <b>⚠️ 注意</b>：<c>StyleSheet.CreateStyleSet()</c> 创建的是空容器，其
-    /// <c>Style.Fill</c>、<c>Style.Outline</c> 等属性均为 <c>null</c>，
-    /// 必须先调用 <c>Style.CreateStyle("fill")</c> 等方法创建子样式才可访问。
-    /// 本类的 <see cref="CreateStyleSetViaShape"/> 方法通过临时形状绕过此问题。
+    /// <c>Style.Fill</c>、<c>Style.Outline</c> 等属性均为 <c>null</c>。
+    /// <c>Style</c>（样式集）对象<b>没有</b> <c>CreateStyle</c> 方法，不能在容器上直接创建子样式。
+    /// 唯一正确做法：通过临时形状配合 <c>CreateStyleSetFromShape</c> 捕获。
+    /// 请使用本类的 <see cref="CreateStyleSetViaShape"/> 方法，它已正确封装此流程。
     /// </para>
     /// <para>
     /// <b>依赖</b>：运行时需要 CorelDRAW X7 或更高版本已安装并注册。
@@ -260,64 +260,6 @@ namespace CorelDrawCOMAPI
                 // 无论是否成功，都删除临时形状
                 try { tmpShape?.Delete(); }
                 catch { }
-            }
-        }
-
-        /// <summary>
-        /// 通过子样式方法创建一个包含填充 + 轮廓的样式集（StyleSet）。
-        /// <para>
-        /// <b>原理</b>：先调用 <c>CreateStyleSet</c> 创建空容器，
-        /// 再分别调用 <c>styleSet.CreateStyle("fill")</c> 和
-        /// <c>styleSet.CreateStyle("outline")</c> 激活对应属性，
-        /// 然后通过子样式对象设置具体属性值。
-        /// </para>
-        /// </summary>
-        /// <param name="app">CorelDRAW Application COM 对象。</param>
-        /// <param name="name">样式集名称。</param>
-        /// <param name="fillR">填充颜色 R（0–255）。</param>
-        /// <param name="fillG">填充颜色 G（0–255）。</param>
-        /// <param name="fillB">填充颜色 B（0–255）。</param>
-        /// <param name="outlineWidthMm">轮廓宽度（毫米）；传 0 表示不添加轮廓子样式。</param>
-        /// <param name="outlineR">轮廓颜色 R（0–255）。</param>
-        /// <param name="outlineG">轮廓颜色 G（0–255）。</param>
-        /// <param name="outlineB">轮廓颜色 B（0–255）。</param>
-        /// <param name="replaceExisting">同名样式集存在时是否覆盖，默认 <c>true</c>。</param>
-        /// <returns>
-        /// 创建成功时返回 <c>Style</c> COM 对象（<c>IsStyleSet = true</c>）；
-        /// 失败时返回 <c>null</c>。
-        /// </returns>
-        public static dynamic CreateStyleSetViaSubStyles(
-            dynamic app,
-            string name,
-            int fillR, int fillG, int fillB,
-            double outlineWidthMm = 0.5,
-            int outlineR = 0, int outlineG = 0, int outlineB = 0,
-            bool replaceExisting = true)
-        {
-            try
-            {
-                dynamic sheet = app.ActiveDocument.StyleSheet;
-                // 创建空样式集容器（此时 ss.Fill / ss.Outline 均为 null）
-                dynamic ss = sheet.CreateStyleSet(string.Empty, name, replaceExisting);
-
-                // 在容器内创建 fill 子样式 → 激活 ss.Fill，使其不再为 null
-                dynamic fillSub = ss.CreateStyle(CategoryFill);
-                fillSub.Fill.Type = 1; // cdrUniformFillStyle = 1
-                fillSub.Fill.PrimaryColor.RGBAssign(fillR, fillG, fillB);
-
-                // 在容器内创建 outline 子样式（可选）
-                if (outlineWidthMm > 0)
-                {
-                    dynamic outlineSub = ss.CreateStyle(CategoryOutline);
-                    outlineSub.Outline.Width = outlineWidthMm;
-                    outlineSub.Outline.Color.RGBAssign(outlineR, outlineG, outlineB);
-                }
-
-                return ss;
-            }
-            catch
-            {
-                return null;
             }
         }
 
