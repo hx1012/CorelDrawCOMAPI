@@ -1,6 +1,6 @@
 # CorelDRAW X7 COM API 脚本参考
 
-本仓库整理了通过阅读官方《CorelDRAW X7 脚本参考手册》（PDF / CHM）提炼的 VBA 宏使用指南与示例代码，涵盖文字样式设置、表格创建与格式化等常用场景，方便开发者快速查阅正确的 COM API 用法。
+本仓库整理了通过阅读官方《CorelDRAW X7 脚本参考手册》（PDF / CHM）提炼的 VBA 宏使用指南与示例代码，涵盖形状对象、打印机操作、文字样式设置、表格创建与格式化等常用场景，方便开发者快速查阅正确的 COM API 用法。
 
 ---
 
@@ -8,6 +8,8 @@
 
 | 文件 / 目录 | 说明 |
 |-------------|------|
+| `Shape对象完整指南.md` | **Shape · ShapeRange · Shapes · SelectionInfo** 全部属性、方法、选择操作、布尔运算及综合示例 |
+| `打印机操作完整指南.md` | **打印机系统 · PrintSettings · PostScript · 分色 · 陷印 · 印前处理**全部 API 速查及综合示例 |
 | `对象样式设置指南.md` | 轮廓、填充、透明度、字符、段落、图文框、位图效果、QR 码等完整 API 速查 |
 | `字体样式设置指南.md` | 字体名称、字号、粗/斜/下划线、大小写、上下标、颜色、间距等完整 API 速查 |
 | `创建表格指南.md` | 表格创建、单元格读写、合并、填充、边框、行列管理等 API 速查及示例 |
@@ -36,6 +38,51 @@
 ---
 
 ## 内容导览
+
+### Shape 对象 → [`Shape对象完整指南.md`](Shape对象完整指南.md)
+
+涵盖以下四大类：
+
+- **Shape**：CorelDRAW 中所有可见元素的核心对象
+  - 位置与尺寸属性：`PositionX/Y`、`SizeWidth/Height`、`CenterX/Y`、`BoundingBox`
+  - 变换方法：`Move`、`Rotate`、`RotateEx`、`SetSize`、`Stretch`、`Flip`、`Skew`、`AffineTransform`
+  - 选择与层次：`Selected`、`AddToSelection`、`CreateSelection`、`OrderToFront`、`Layer`
+  - 布尔运算：`Weld`、`Trim`、`Intersect`、`Combine`、`EqualDivide`
+  - 克隆与复制：`Clone`、`Duplicate`、`StepAndRepeat`、`CloneLink`
+  - 组合管理：`Group`、`Ungroup`、`UngroupAll`、`BreakApart`
+  - 效果：`CreateBlend`、`CreateDropShadow`、`CreateContour`、`CreateEnvelope` 等 13 种
+  - 形状访问：`Curve`、`Rectangle`、`Ellipse`、`Text`、`Bitmap`、`Polygon` 等
+
+- **ShapeRange**：Shape 的动态数组，可用 `New ShapeRange` 创建
+  - 集合管理：`Add`、`AddRange`、`Remove`、`RemoveAll`、`Sort`（CQL 排序）
+  - 批量变换：与 Shape 相同的全套变换方法
+  - 批量外观：`ApplyUniformFill`、`ApplyFountainFill`、`SetOutlineProperties` 等
+  - 批量效果：`ApplyEffectBCI`、`ApplyEffectHSL` 等
+  - 群组/合并：`Group`、`Combine`、`Ungroup`、`BreakApart`
+  - 查询：`Exists`、`ExistsAnyOfType`、`CountAnyOfType`、`FindAnyOfType`
+
+- **Shapes**：固定集合，反映文档真实结构
+  - `All()`、`AllExcluding()`、`Range()`：转换为 ShapeRange
+  - `FindShape()`、`FindShapes()`：按名称、类型、CQL 查询
+
+- **SelectionInfo**：选区状态只读信息对象
+  - `Can...` 系列属性（30+ 个）：判断当前选区能否执行指定操作
+  - `Is...` 系列属性（40+ 个）：判断选区包含哪类对象
+  - 关联形状访问：`BlendBottomShape`、`ContourControlShape`、`DropShadowGroup` 等
+
+### 打印机操作 → [`打印机操作完整指南.md`](打印机操作完整指南.md)
+
+涵盖以下模块：
+
+- **SystemPrinters / Printer**：枚举已安装打印机、判断彩色/PostScript 能力
+- **PrintSettings**（核心入口）：打印机选择、份数、范围、纸张、打印到文件；`Save`/`Load`/`ShowDialog` 方法
+- **PrintOptions**：颜色模式（`PrnColorMode`）、位图/矢量/文字开关、降采样、栅格化打印
+- **PrintLayout**：页面放置（`PrnPlaceType` 12 种）、平铺打印、出血
+- **PrintPostScript**：PostScript Level 1/2/3、字体下载、JPEG 压缩、PDF 蒸馏选项
+- **PrintPrepress**：裁切/套准标记、颜色校准条、密度计刻度、负片/镜像输出
+- **PrintSeparations / SeparationPlate**：CMYK 分色、专色转换、加网角度/频率
+- **PrintTrapping**：陷印宽度、黑色阈值、图像陷印模式（`PrnImageTrap`）
+- **打印事件**：`BeforePrint`、`AfterPrint`、`QueryPrint`
 
 ### 对象样式设置 → [`对象样式设置指南.md`](对象样式设置指南.md)
 
