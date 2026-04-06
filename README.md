@@ -1,6 +1,6 @@
 # CorelDRAW X7 COM API 脚本参考
 
-本仓库整理了通过阅读官方《CorelDRAW X7 脚本参考手册》（PDF / CHM）提炼的 VBA 宏使用指南与示例代码，涵盖形状对象、打印机操作、文字样式设置、表格创建与格式化等常用场景，方便开发者快速查阅正确的 COM API 用法。
+本仓库整理了通过阅读官方《CorelDRAW X7 脚本参考手册》（PDF / CHM）提炼的 VBA 宏使用指南、示例代码，以及 **C# 封装工具类**，涵盖形状对象、打印机操作、文字样式设置、表格创建与格式化等常用场景，方便开发者快速查阅正确的 COM API 用法。
 
 ---
 
@@ -8,6 +8,8 @@
 
 | 文件 / 目录 | 说明 |
 |-------------|------|
+| `TextRangeHelper.cs` | **C# 工具类**：统一从编辑选区/选中形状/当前页面/整个文档获取 `TextRange`，永不抛出 COM 异常 |
+| `TextRange获取工具类.md` | `TextRangeHelper.cs` 的完整中文文档：API 说明、分场景示例、优先级说明、常见问题 |
 | `Shape对象完整指南.md` | **Shape · ShapeRange · Shapes · SelectionInfo** 全部属性、方法、选择操作、布尔运算及综合示例 |
 | `打印机操作完整指南.md` | **打印机系统 · PrintSettings · PostScript · 分色 · 陷印 · 印前处理**全部 API 速查及综合示例 |
 | `对象样式设置指南.md` | 轮廓、填充、透明度、字符、段落、图文框、位图效果、QR 码等完整 API 速查 |
@@ -22,12 +24,14 @@
 ## 运行环境
 
 - **软件**：CorelDRAW X7 或更高版本（X8、2017–2021）
-- **语言**：VBA（Visual Basic for Applications）
-- **权限**：无需安装额外插件，使用 CorelDRAW 内置宏引擎即可
+- **VBA**：无需安装额外插件，使用 CorelDRAW 内置宏引擎即可
+- **C#**：.NET Framework 4.7.2 / .NET 6+，C# 8.0+；无需 COM 引用（`dynamic` 后期绑定）
 
 ---
 
 ## 快速开始
+
+### VBA 宏
 
 1. 打开 CorelDRAW。
 2. 点击菜单 **工具（Tools）→ 宏（Macros）→ 宏编辑器（Macro Editor）**，或按 **Alt+F11**。
@@ -35,9 +39,45 @@
 4. 将光标置于任意 `Sub` 过程内，按 **F5** 运行。
 5. 切换回 CorelDRAW 主窗口查看结果。
 
+### C# 工具类（TextRangeHelper）
+
+1. 将 [`TextRangeHelper.cs`](TextRangeHelper.cs) 复制到 C# 项目中。
+2. 在代码文件顶部添加引用：
+   ```csharp
+   using System.Runtime.InteropServices;
+   using CorelDrawCOMAPI;
+   ```
+3. 连接 CorelDRAW 并使用：
+   ```csharp
+   dynamic app = Marshal.GetActiveObject("CorelDRAW.Application");
+   CorelTextRangeHelper.ForEachTextRange(app, tr =>
+   {
+       tr.Font = "微软雅黑";
+       tr.Size = 12;
+   });
+   ```
+
 ---
 
 ## 内容导览
+
+### TextRange 获取工具类（C#）→ [`TextRangeHelper.cs`](TextRangeHelper.cs) · [`TextRange获取工具类.md`](TextRange获取工具类.md)
+
+统一封装了从四种来源获取 `TextRange` 的逻辑（不需要调用方关心当前是哪种状态）：
+
+- **`TextRangeScope.EditingSelection`**：文字编辑模式下光标选中的区域（`Text.Selection`）
+- **`TextRangeScope.SelectedShapes`**：选区中所有文字形状各自的完整文字（`Text.Story`）
+- **`TextRangeScope.CurrentPage`**：当前页面所有文字形状的 Story
+- **`TextRangeScope.CurrentDocument`**：整个文档所有页面所有文字形状的 Story
+- **`TextRangeScope.Auto`**（默认）：按优先级自动检测，始终返回有意义的结果
+
+核心方法：
+
+| 方法 | 返回值 | 说明 |
+|------|--------|------|
+| `GetTextRanges(app, scope)` | `IReadOnlyList<dynamic>` | 永不返回 null；无文本时返回空列表 |
+| `TryGetTextRange(app, scope)` | `dynamic`（可 null） | 取第一个 TextRange 或 null |
+| `ForEachTextRange(app, action, scope)` | `void` | 批量操作，异常自动跳过 |
 
 ### Shape 对象 → [`Shape对象完整指南.md`](Shape对象完整指南.md)
 
